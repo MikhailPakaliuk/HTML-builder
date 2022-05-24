@@ -24,31 +24,42 @@ fs.promises.mkdir(path.join(__dirname, 'project-dist'), { recursive: true }, (er
 let _pathOriginalDirectory =path.join(__dirname, 'assets');
 let _pathCopyDirectory =path.join(__dirname, 'project-dist', 'assets');
 
-fs.promises.mkdir(_pathCopyDirectory, { recursive: true }, (err) => {
-  if (err) console.error(err);
-});
 
-(async function copyDirectory (pathOriginal = _pathOriginalDirectory, pathCopy = _pathCopyDirectory) {
- 
-  const files = await fs.promises.readdir(pathOriginal, { withFileTypes: true }, (err) => {
+async function handlingDirectory() {
+  await fs.promises.rm(_pathCopyDirectory, { recursive: true, force: true }, (err) => {
     if (err) console.error(err);
   });
-  
-  files.forEach(async file => {
 
-    if (file.isFile()) {
-      let file_name = path.parse(file.name).base;
-      let file_original = path.join(pathOriginal, file_name);
-      let file_copy = path.join(pathCopy, file_name);
-      await fs.promises.copyFile(file_original, file_copy);
-    }else{
-      fs.promises.mkdir(path.join(pathCopy, file.name), { recursive: true }, (err) => {
-        if (err) console.error(err);
-      });
-      copyDirectory (path.join(pathOriginal, file.name), path.join(pathCopy, file.name));
-    }
+  await fs.promises.mkdir(_pathCopyDirectory, { recursive: true }, (err) => {
+    if (err) console.error(err);
   });
-  console.log('Файлы скопированы в папку.');
-}());
 
-//reader.on('data', (chunk) => console.log(chunk.toString()));
+  (async function copyDirectory (pathOriginal = _pathOriginalDirectory, pathCopy = _pathCopyDirectory) {
+ 
+    const files = await fs.promises.readdir(pathOriginal, { withFileTypes: true }, (err) => {
+      if (err) console.error(err);
+    });
+  
+    files.forEach(async file => {
+
+      if (file.isFile()) {
+        let file_name = path.parse(file.name).base;
+        let file_original = path.join(pathOriginal, file_name);
+        let file_copy = path.join(pathCopy, file_name);
+        await fs.promises.copyFile(file_original, file_copy);
+      }else{
+        fs.promises.mkdir(path.join(pathCopy, file.name), { recursive: true }, (err) => {
+          if (err) console.error(err);
+        });
+        copyDirectory (path.join(pathOriginal, file.name), path.join(pathCopy, file.name));
+      }
+    });
+    console.log('Файлы скопированы в папку.');
+  }());
+}
+
+handlingDirectory();
+
+let buff = '';
+reader.on('data', (chunk) => buff += chunk.toString());
+reader.on('end', () => console.log(buff));
