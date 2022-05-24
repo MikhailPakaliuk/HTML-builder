@@ -56,7 +56,9 @@ handlingDirectory();
 async function componentsTemplates() {
   let result = {};
   let pathComponents = path.join(__dirname, 'components');
-  const components = await fs.promises.readdir( pathComponents, { withFileTypes: true });
+  const components = await fs.promises.readdir( pathComponents, { withFileTypes: true }, (err) => {
+    if (err) console.error(err);
+  });
   for (let file of components) {
     let file_path = path.join( pathComponents, file.name);
     let file_name = path.parse(file.name).name;
