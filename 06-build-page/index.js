@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
-let reader = fs.createReadStream(path.join(__dirname, 'template.html'));
+let readerTemplateStream = fs.createReadStream(path.join(__dirname, 'template.html'));
 
-fs.promises.mkdir(path.join(__dirname, 'project-dist'), { recursive: true }, (err) => {
+let _pathProjectDist = path.join(__dirname, 'project-dist');
+fs.promises.mkdir(_pathProjectDist, { recursive: true }, (err) => {
   if (err) console.error(err);
 });
 
@@ -18,30 +19,23 @@ fs.promises.mkdir(path.join(__dirname, 'project-dist'), { recursive: true }, (er
       readableStream.pipe(writeableStream);
     }
   });
-  console.log('Файл .css собран');
 }());
 
 let _pathOriginalDirectory =path.join(__dirname, 'assets');
 let _pathCopyDirectory =path.join(__dirname, 'project-dist', 'assets');
 
-
 async function handlingDirectory() {
   await fs.promises.rm(_pathCopyDirectory, { recursive: true, force: true }, (err) => {
     if (err) console.error(err);
   });
-
   await fs.promises.mkdir(_pathCopyDirectory, { recursive: true }, (err) => {
     if (err) console.error(err);
   });
-
   (async function copyDirectory (pathOriginal = _pathOriginalDirectory, pathCopy = _pathCopyDirectory) {
- 
     const files = await fs.promises.readdir(pathOriginal, { withFileTypes: true }, (err) => {
       if (err) console.error(err);
     });
-  
     files.forEach(async file => {
-
       if (file.isFile()) {
         let file_name = path.parse(file.name).base;
         let file_original = path.join(pathOriginal, file_name);
@@ -54,12 +48,35 @@ async function handlingDirectory() {
         copyDirectory (path.join(pathOriginal, file.name), path.join(pathCopy, file.name));
       }
     });
-    console.log('Файлы скопированы в папку.');
   }());
 }
 
 handlingDirectory();
 
-let buff = '';
-reader.on('data', (chunk) => buff += chunk.toString());
-reader.on('end', () => console.log(buff));
+async function componentsTemplates() {
+  let result = {};
+  let pathComponents = path.join(__dirname, 'components');
+  const components = await fs.promises.readdir( pathComponents, { withFileTypes: true });
+  for (let file of components) {
+    let file_path = path.join( pathComponents, file.name);
+    let file_name = path.parse(file.name).name;
+    if (file.isFile() && path.parse(file.name).ext === '.html') {
+      let dataHtmlComponent = await fs.promises.readFile(file_path);
+      result[file_name] = dataHtmlComponent.toString();
+    }
+  }
+  return result;
+}
+
+(async function () {
+  const writeableTemplateStream = fs.createWriteStream(path.join(_pathProjectDist, 'index.html'));
+  const objComponents = await componentsTemplates();
+  let strTemplates = '';
+  readerTemplateStream.on('data', (chunk) => strTemplates += chunk.toString()).on('end', () => {
+    for (let component of Object.keys(objComponents)) {
+      strTemplates = strTemplates.replace(`{{${component}}}`, objComponents[component]);
+    }
+    writeableTemplateStream.write(strTemplates);
+  });   
+}());
+
