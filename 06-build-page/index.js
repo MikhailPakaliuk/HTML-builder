@@ -16,7 +16,8 @@ fs.promises.mkdir(_pathProjectDist, { recursive: true }, (err) => {
     if (file.isFile() && path.parse(file.name).ext === '.css') {
       let file_name = path.parse(file.name).base;
       let readableStream = fs.createReadStream(path.join(__dirname, 'styles', file_name));
-      readableStream.pipe(writeableStream);
+      readableStream.on('data', data => writeableStream.write(data.toString()+'\n'));
+      //readableStream.pipe(writeableStream);
     }
   });
 }());
